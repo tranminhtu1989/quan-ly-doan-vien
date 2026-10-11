@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản lý Đoàn viên - THPT Số 1 Trần Phú</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-title">QUẢN LÝ ĐOÀN VIÊN</div>
+    <div class="hero-subtitle">TRƯỜNG THPT SỐ 1 TRẦN PHÚ</div>
+  </div>
+</header>
+
+<main class="app-shell">
+  <section class="system-card">
+    <div class="system-left">
+      <div class="online-dot">●</div>
+      <div>
+        <div class="system-title">Hệ thống quản lý đoàn viên</div>
+        <div class="system-subtitle">Đang hoạt động • Không yêu cầu tài khoản đăng nhập</div>
+      </div>
+    </div>
+    <div class="system-right">
+      <label for="yearSelect">Năm học</label>
+      <select id="yearSelect"></select>
+    </div>
+  </section>
+
+  <nav class="nav-card">
+    <button class="tab active" data-tab="dashboard">📊 Tổng quan</button>
+    <button class="tab" data-tab="students">👥 Đoàn viên</button>
+    <button class="tab" data-tab="search">🔎 Tra cứu</button>
+    <button class="tab" data-tab="reports">📥 Báo cáo Excel</button>
+    <button class="tab" data-tab="schoolyear">⚙️ Năm học</button>
+  </nav>
+
+  <section id="dashboard" class="panel active">
+    <div class="content-card">
+      <div class="section-head">
+        <div>
+          <h1>📊 TỔNG QUAN</h1>
+          <p>Thống kê đoàn viên và học sinh theo năm học đang chọn.</p>
+        </div>
+        <div class="year-pill" id="dashboardYear"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card total"><div class="stat-icon">👨‍🎓</div><div><span>TỔNG HỌC SINH</span><strong id="totalStudents">0</strong></div></div>
+        <div class="stat-card member"><div class="stat-icon">🟢</div><div><span>ĐOÀN VIÊN</span><strong id="totalMembers">0</strong></div></div>
+        <div class="stat-card youth"><div class="stat-icon">🔵</div><div><span>THANH NIÊN</span><strong id="totalYouth">0</strong></div></div>
+        <div class="stat-card male"><div class="stat-icon">👨</div><div><span>NAM</span><strong id="totalMale">0</strong></div></div>
+        <div class="stat-card female"><div class="stat-icon">👩</div><div><span>NỮ</span><strong id="totalFemale">0</strong></div></div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="data-card"><div class="data-card-head"><h2>👥 Đoàn viên theo lớp</h2><span class="mini-label">Số lượng</span></div><div id="classStats"></div></div>
+        <div class="data-card"><div class="data-card-head"><h2>📍 Đoàn viên theo địa chỉ thường trú</h2><span class="mini-label">Số lượng</span></div><div id="addressStats"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="students" class="panel">
+    <div class="content-card">
+      <div class="section-head">
+        <div><h1>👥 DANH SÁCH ĐOÀN VIÊN</h1><p>Chọn lớp để xác nhận đoàn viên, cập nhật hồ sơ hoặc bổ sung học sinh.</p></div>
+      </div>
+      <div class="control-card">
+        <div class="control-item class-control"><label>Chọn lớp</label><select id="classSelect"></select></div>
+        <button class="action primary" id="addStudentBtn">＋ Thêm học sinh</button>
+        <button class="action" id="importBtn">📥 Nhập Excel</button>
+      </div>
+      <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" hidden>
+      <div id="classSummary" class="summary-banner"></div>
+      <div class="table-card"><div class="table-wrap"><table><thead><tr><th>STT</th><th>HỌ VÀ TÊN</th><th>NGÀY SINH</th><th>GT</th><th>TRẠNG THÁI</th><th>NGÀY KẾT NẠP</th><th>CHỨC VỤ</th><th>ĐỊA CHỈ</th><th>THAO TÁC</th></tr></thead><tbody id="studentTable"></tbody></table></div></div>
+    </div>
+  </section>
+
+  <section id="search" class="panel">
+    <div class="content-card">
+      <div class="section-head"><div><h1>🔎 TRA CỨU ĐOÀN VIÊN</h1><p>Tìm kiếm và lọc đoàn viên theo lớp, giới tính, địa chỉ và chức vụ.</p></div></div>
+      <div class="filters-card">
+        <div><label>Tìm họ tên</label><input id="searchText" placeholder="Nhập họ tên..." /></div>
+        <div><label>Lớp</label><select id="searchClass"></select></div>
+        <div><label>Giới tính</label><select id="searchGender"><option value="">Tất cả</option><option>Nam</option><option>Nữ</option></select></div>
+        <div><label>Trạng thái</label><select id="searchStatus"><option value="">Tất cả</option><option value="member">Đoàn viên</option><option value="youth">Thanh niên</option></select></div>
+        <div><label>Địa chỉ</label><select id="searchAddress"></select></div>
+        <div><label>Chức vụ</label><select id="searchPosition"><option value="">Tất cả</option><option>Bí thư Chi đoàn</option><option>Phó Bí thư Chi đoàn</option><option>Ủy viên BCH Chi đoàn</option><option>Không giữ chức vụ</option></select></div>
+      </div>
+      <div class="table-card"><div class="table-wrap"><table><thead><tr><th>STT</th><th>HỌ VÀ TÊN</th><th>LỚP</th><th>NGÀY SINH</th><th>GT</th><th>TRẠNG THÁI</th><th>NGÀY KẾT NẠP</th><th>ĐỊA CHỈ</th><th>CHỨC VỤ</th></tr></thead><tbody id="searchTable"></tbody></table></div></div>
+    </div>
+  </section>
+
+  <section id="reports" class="panel">
+    <div class="content-card">
+      <div class="section-head"><div><h1>📥 BÁO CÁO & XUẤT EXCEL</h1><p>Xuất báo cáo đoàn viên theo lớp, địa chỉ hoặc toàn trường.</p></div></div>
+      <div class="report-grid">
+        <div class="report-card"><div class="report-icon">👥</div><h2>Toàn bộ đoàn viên</h2><p>Xuất danh sách đoàn viên của năm học đang chọn.</p><button class="action primary" id="exportMembers">📊 Xuất Excel</button></div>
+        <div class="report-card"><div class="report-icon">🏫</div><h2>Theo lớp</h2><p>Chọn lớp cần xuất danh sách.</p><select id="reportClass"></select><button class="action primary" id="exportClass">📊 Xuất Excel</button></div>
+        <div class="report-card"><div class="report-icon">📍</div><h2>Theo địa chỉ thường trú</h2><p>Thống kê đoàn viên theo địa bàn.</p><select id="reportAddress"></select><button class="action primary" id="exportAddress">📊 Xuất Excel</button></div>
+        <div class="report-card"><div class="report-icon">📋</div><h2>Toàn bộ học sinh</h2><p>Bao gồm cả đoàn viên và thanh niên.</p><button class="action primary" id="exportAll">📊 Xuất Excel</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="schoolyear" class="panel">
+    <div class="content-card">
+      <div class="section-head"><div><h1>⚙️ QUẢN LÝ NĂM HỌC</h1><p>Tạo năm học mới và thực hiện lên lớp tự động.</p></div></div>
+      <div class="year-management-grid">
+        <div class="data-card"><h2>＋ Tạo năm học</h2><p>Tạo một năm học mới để tiếp tục quản lý dữ liệu.</p><label>Năm học mới</label><input id="newYear" placeholder="2027-2028"><button class="action primary" id="createYearBtn">＋ Tạo năm học</button></div>
+        <div class="data-card promotion"><h2>🚀 Lên lớp tự động</h2><p>10 → 11, 11 → 12. Khối 12 sẽ không tự đưa sang năm mới.</p><button class="action primary" id="promoteBtn">🚀 Tạo năm mới & lên lớp</button></div>
+      </div>
+      <div class="data-card"><div class="data-card-head"><h2>🕘 Lịch sử chuyển lớp / rời lớp</h2></div><div id="historyTable"></div></div>
+    </div>
+  </section>
+</main>
+
+<footer>QUẢN LÝ ĐOÀN VIÊN • THPT SỐ 1 TRẦN PHÚ • Dữ liệu được quản lý theo từng năm học</footer>
+
+<div class="modal hidden" id="studentModal"><div class="modal-card"><button class="close" data-close>×</button><div class="modal-head"><div class="modal-icon">👤</div><div><h2 id="modalTitle">Thêm học sinh</h2><p>Cập nhật thông tin học sinh / đoàn viên</p></div></div><form id="studentForm"><input type="hidden" id="studentId"><div class="form-grid"><label>Họ và tên *<input id="fName" required></label><label>Ngày sinh *<input id="fDob" type="date" required></label><label>Giới tính *<select id="fGender" required><option value="">Chọn</option><option>Nam</option><option>Nữ</option></select></label><label>Lớp *<select id="fClass" required></select></label><label>Trạng thái *<select id="fStatus" required><option value="youth">Thanh niên</option><option value="member">Đoàn viên</option></select></label><label>Ngày kết nạp Đoàn<input id="fAdmission" type="date"></label><label>Địa chỉ thường trú<select id="fAddress"></select></label><label>Số điện thoại<input id="fPhone" inputmode="tel"></label><label>Chức vụ Đoàn<select id="fPosition"><option value="">Không giữ chức vụ</option><option>Bí thư Chi đoàn</option><option>Phó Bí thư Chi đoàn</option><option>Ủy viên BCH Chi đoàn</option></select></label></div><div class="hint">Chức vụ không bắt buộc. Chỉ có 3 chức vụ: Bí thư, Phó Bí thư và Ủy viên BCH Chi đoàn.</div><div class="form-actions"><button type="button" data-close>Hủy</button><button class="action primary" type="submit">💾 Lưu thông tin</button></div></form></div></div>
+<div class="modal hidden" id="moveModal"><div class="modal-card compact"><button class="close" data-close>×</button><div class="modal-head"><div class="modal-icon">🔄</div><div><h2>Chuyển học sinh</h2><p>Thay đổi lớp và lưu lịch sử.</p></div></div><input type="hidden" id="moveStudentId"><label>Chuyển đến lớp<select id="moveClass"></select></label><label>Lý do<select id="moveReason"><option>Chuyển lớp</option><option>Chuyển trường</option><option>Nghỉ học</option><option>Khác</option></select></label><div class="form-actions"><button data-close>Hủy</button><button class="action primary" id="confirmMove">Xác nhận chuyển</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script type="module" src="app.js"></script>
+</body></html>

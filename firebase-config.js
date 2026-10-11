@@ -1,5 +1,4 @@
-// Firebase Web configuration for quan-ly-doan-vien-tran-phu.
-// This config identifies the web app; it is not a server credential.
+
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyCPG1Uaja5S4eeb0eVeGLp9u5gD9g1Ibps",
   authDomain: "quan-ly-doan-vien-tran-phu.firebaseapp.com",

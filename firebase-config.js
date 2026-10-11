@@ -1,6 +1,6 @@
 
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBK8GWLDq-vj8V8JAWzaGPdOA5U0EhUndQ",
+  apiKey: "AIzaSyCPg1Uaja5S4eeb0eVeGLp9u5gD9g1Ibps",
   authDomain: "quan-ly-doan-vien-tran-phu.firebaseapp.com",
   projectId: "quan-ly-doan-vien-tran-phu",
   storageBucket: "quan-ly-doan-vien-tran-phu.firebasestorage.app",

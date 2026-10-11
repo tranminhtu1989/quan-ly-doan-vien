@@ -1,11 +1,13 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, writeBatch, query, where } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import './firebase-config.js';
 import { SEED_STUDENTS } from './seed-students.js';
 
 const ADDRESSES=['Xã Hòa Phú','Phường Buôn Ma Thuột','Xã Ea Na','Xã Ea Nuôl','Xã Tân Lập','Xã Tân An','Phường Thành Nhất','Khác'];
 const POSITIONS=['','Bí thư Chi đoàn','Phó Bí thư Chi đoàn','Ủy viên BCH Chi đoàn'];
 let db=null;
+let auth=null;
 let mode='local';
 let state={years:['2026-2027'],year:'2026-2027',students:[],history:[]};
 const $=s=>document.querySelector(s);
@@ -13,14 +15,26 @@ const $$=s=>[...document.querySelectorAll(s)];
 
 try{
   const c=window.FIREBASE_CONFIG||{};
-  if(c.apiKey&&c.projectId){ db=getFirestore(initializeApp(c)); mode='firebase'; }
+  if(c.apiKey&&c.projectId){ const app=initializeApp(c); db=getFirestore(app); auth=getAuth(app); mode='firebase'; }
 }catch(e){ console.warn('Firebase chưa cấu hình, chạy Local Demo.',e); }
 
 const key=()=>`doanvien_${state.year}`;
 async function load(){
   if(mode==='firebase'){
+    // Anonymous sign-in keeps the UI free of login forms. It does NOT by itself
+    // distinguish trusted class secretaries; Firestore rules must be secured separately.
+    if(!auth.currentUser) await signInAnonymously(auth);
     const snap=await getDocs(collection(db,'unionStudents'));
-    state.students=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(snap.empty && SEED_STUDENTS.length && confirm(`Firestore đang trống. Thầy có muốn nhập ${SEED_STUDENTS.length} học sinh từ danh sách mẫu đi kèm vào Firebase không? Dữ liệu sẽ được tải lên cơ sở dữ liệu trực tuyến.`)){
+      // Firestore batch limit is 500 operations; keep batches below the limit.
+      for(let i=0;i<SEED_STUDENTS.length;i+=400){
+        const batch=writeBatch(db);
+        SEED_STUDENTS.slice(i,i+400).forEach(st=>batch.set(doc(db,'unionStudents',st.id),{...st}));
+        await batch.commit();
+      }
+    }
+    const latest=await getDocs(collection(db,'unionStudents'));
+    state.students=latest.docs.map(d=>({id:d.id,...d.data()}));
     const hs=await getDocs(collection(db,'unionHistory')); state.history=hs.docs.map(d=>({id:d.id,...d.data()}));
     const ys=await getDocs(collection(db,'unionYears')); state.years=ys.docs.map(d=>d.id).sort();
     if(!state.years.length){state.years=['2026-2027']; await setDoc(doc(db,'unionYears','2026-2027'),{createdAt:Date.now()});}
@@ -38,7 +52,8 @@ async function load(){
 }
 async function saveStudent(s){
   if(mode==='firebase') await setDoc(doc(db,'unionStudents',s.id),s);
-  else{const arr=state.students.filter(x=>x.id!==s.id);arr.push(s);state.students=arr;localStorage.setItem(key(),JSON.stringify(arr));}
+  const arr=state.students.filter(x=>x.id!==s.id);arr.push(s);state.students=arr;
+  if(mode==='local') localStorage.setItem(key(),JSON.stringify(state.students));
 }
 async function removeStudent(id){
   if(mode==='firebase') await deleteDoc(doc(db,'unionStudents',id));
@@ -50,7 +65,8 @@ async function saveHistory(h){
 }
 async function saveYear(y){
   if(mode==='firebase') await setDoc(doc(db,'unionYears',y),{createdAt:Date.now()});
-  if(!state.years.includes(y)) state.years.push(y); localStorage.setItem('doan_years',JSON.stringify(state.years));
+  if(!state.years.includes(y)) state.years.push(y);
+  if(mode==='local') localStorage.setItem('doan_years',JSON.stringify(state.years));
 }
 function uid(){return crypto.randomUUID?crypto.randomUUID():`id_${Date.now()}_${Math.random().toString(36).slice(2)}`}
 function classes(){return [...new Set(state.students.map(s=>s.className).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));}
@@ -120,4 +136,4 @@ $('#exportAddress').onclick=()=>{const a=$('#reportAddress').value;download(expo
 $('#createYearBtn').onclick=async()=>{const y=$('#newYear').value.trim();if(!/^\d{4}-\d{4}$/.test(y)){alert('Nhập năm học theo dạng 2027-2028');return}if(state.years.includes(y)){alert('Năm học đã tồn tại');return}await saveYear(y);state.year=y;await load();toast('Đã tạo năm học mới')};
 $('#promoteBtn').onclick=async()=>{const newYear=$('#newYear').value.trim();if(!/^\d{4}-\d{4}$/.test(newYear)){alert('Nhập năm học mới ở ô trên, ví dụ 2027-2028');return}if(state.years.includes(newYear)){alert('Năm học mới đã tồn tại');return}if(!confirm(`Tạo ${newYear} và tự động lên lớp từ ${state.year}?`))return;const old=state.year;await saveYear(newYear);const arr=currentStudents();for(const s of arr){const g=String(s.className).match(/^(10|11|12)(.*)$/i);if(!g||g[1]==='12')continue;const ns={...s,id:uid(),year:newYear,className:`${Number(g[1])+1}${g[2]}`,createdFrom:s.id};await saveStudent(ns);await saveHistory({id:uid(),name:s.name,year:old,toYear:newYear,fromClass:s.className,toClass:ns.className,reason:'Lên lớp tự động',createdAt:Date.now()})}state.year=newYear;await load();toast(`Đã tạo ${newYear} và lên lớp tự động`)};
 
-load().catch(err=>{console.error(err);toast('Có lỗi khi tải dữ liệu. Nếu dùng Firebase, hãy kiểm tra cấu hình.');});
+load().catch(err=>{console.error(err);const msg=err?.code==='permission-denied'?'Firebase từ chối truy cập. Cần cấu hình Firestore Rules an toàn trước khi sử dụng.':(err?.message||'Không tải được dữ liệu. Kiểm tra cấu hình Firebase và kết nối mạng.');toast(msg);alert('Không tải được dữ liệu Firebase.\n\n'+msg+'\n\nKhông mở quyền đọc/ghi công khai nếu chưa có phương án bảo vệ dữ liệu học sinh.');});
